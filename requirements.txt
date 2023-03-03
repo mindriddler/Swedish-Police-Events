@@ -1,0 +1,6 @@
+black
+pytest
+tox
+flake8
+requests
+coverage
