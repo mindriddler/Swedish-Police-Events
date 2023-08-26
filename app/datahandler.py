@@ -1,103 +1,92 @@
-import json
 import requests
+import re
+from beaupy import prompt
 
 
 class DataHandler:
-    def __init__(self) -> None:
-        self.data = self.get_data()
-        self.save_data_to_json()
+    def __init__(self, console) -> None:
+        self.console = console
 
-    def get_all_data_from_json(self):
-        return self.data
-
-    def get_latest_data_from_json(self):
-        data = self.make_data_pretty(data=self.data[0])
-        return data
-
-    def get_events_by_argument(self, filter):
-        num_of_events = 0
-        if filter == "location":
-            location = input("Enter location: ")
-            for event in self.data:
-                if event["location"]["name"] == location:
-                    num_of_events += 1
-            print(f"The number of events in {location} is {num_of_events}")
-            choice = input("Do you want to display them all?: ")
-            if choice == "yes":
-                formated_events = []
-                for event in self.data:
-                    if event["location"]["name"] == location:
-                        formated = self.make_data_pretty(event)
-                        formated_events.append(formated)
-                return formated_events
-            else:
-                return
-        elif filter == "date":
-            date = input("Enter date: ")
-            for event in self.data:
-                if event["datetime".split(" ")] == date:
-                    num_of_events += 1
-            print(f"The number of events on {date} is {num_of_events}")
-            choice = input("Do you want to display them all?: ")
-            if choice == "yes":
-                formated_events = []
-                for event in self.data:
-                    if event["datetime"] == date:
-                        formated = self.make_data_pretty(event)
-                        formated_events.append(formated)
-                return formated_events
-            else:
-                return
-        elif filter == "type":
-            type = input("Enter type: ")
-            for event in self.data:
-                if event["type"] == type:
-                    num_of_events += 1
-            print(f"The number of events of type {type} is {num_of_events}")
-            choice = input("Do you want to display them all?: ")
-            if choice == "yes":
-                formated_events = []
-                for event in self.data:
-                    if event["type"] == type:
-                        formated = self.make_data_pretty(event)
-                        formated_events.append(formated)
-                return formated_events
-            else:
-                return
-        else:
-            print("Invalid filter")
-
-    def get_specific_number_of_events(self, num_of_events):
-        list_of_events = []
-        formated_events = []
-        for event in self.data:
-            if num_of_events == 0:
-                break
-            else:
-                list_of_events.append(event)
-                num_of_events -= 1
-        for event in list_of_events:
-            formated = self.make_data_pretty(event)
-            formated_events.append(formated)
-        return formated_events
+    def make_api_call(self, event_type=None, filter=None):
+        self.console.print("Getting data from polisens API", style="bold green")
+        if event_type != None:
+            self.console.print(
+                f"Filtering data based on",
+                style="bold green",
+            )
+            self.console.print(f"   - event type: {event_type}", style="yellow")
+            self.console.print(f"   - filter: {filter}", style="yellow")
+            data = requests.get(
+                f"https://polisen.se/api/events?{event_type}={filter}"
+            ).json()
+            return [self.make_data_pretty(event) for event in data]
+        data = requests.get("https://polisen.se/api/events").json()
+        return [self.make_data_pretty(event) for event in data]
 
     def make_data_pretty(self, data):
-        date = "\nTime and date: " + data["datetime"]
-        location = "Location: " + data["location"]["name"]
-        gps = "GPS coordinates: " + data["location"]["gps"]
-        summary = "Summary: " + data["summary"]
-        type = "Type: " + data["type"]
-        url = "URL: " + "https://polisen.se" + data["url"]
+        pretty_data = {
+            "ID": data["id"],
+            "Time and date": data["datetime"],
+            "Location": data["location"]["name"],
+            "GPS coordinates": data["location"]["gps"],
+            "Summary": (
+                "No summary available"
+                if "Efter klockan" in data["summary"]
+                else data["summary"]
+            ),
+            "Type": data["type"],
+            "URL": "https://polisen.se" + data["url"],
+        }
 
-        return (date, location, gps, summary, type, url)
+        return pretty_data
 
-    def save_data_to_json(self):
-        print("Saving data to 'data/events.json' file")
-        with open("data/events.json", "w", encoding="UTF-8") as f:
-            json.dump(self.data, f, indent=4, ensure_ascii=False)
-        f.close()
+    def display_events(self):
+        self.console.print("Displaying all events", style="bold green")
+        data = self.make_api_call()
+        self.display_data(data)
 
-    def get_data(self):
-        print("Getting data from polisens API")
-        response_api = requests.get("https://polisen.se/api/events")
-        return response_api.json()
+    def display_latest_events(self):
+        data = self.make_api_call()
+        self.display_data(data, event_count=1)
+
+    def display_specific_number_of_events(self):
+        event_count = prompt(
+            "How many events do you want to display?: ",
+            target_type=int,
+            validator=lambda count: count > 0,
+        )
+        data = self.make_api_call()
+        self.display_data(data, event_count)
+
+    def display_data(self, data, event_count=None):
+        num_of_events_showed = 0
+        for event in data:
+            for key, value in event.items():
+                self.console.print(f"{key}: {value}")
+            self.console.print("\n")
+            num_of_events_showed += 1
+            if event_count and num_of_events_showed == event_count:
+                self.console.print(
+                    f"{num_of_events_showed} {'event' if event_count == 1 else 'events'} displayed",
+                    style="bold green",
+                )
+                self.console.print("Going back to menu", style="bold red")
+                break
+
+    def filter_by_date(self):
+        date = prompt("Enter date: ")
+        if (
+            re.match(r"^\d{4}$", date)
+            or re.match(r"^\d{4}-\d{2}$", date)
+            or re.match(r"^\d{4}-\d{2}-\d{2}$", date)
+        ):
+            data = self.make_api_call(event_type="datetime", filter=date)
+            self.display_data(data)
+        else:
+            self.console.print("Invalid date", style="bold red")
+            self.console.print(100 * "-")
+
+    def filter_by_location(self):
+        location = prompt("Enter location: ")
+        data = self.make_api_call(event_type="locationname", filter=location)
+        self.display_data(data)
