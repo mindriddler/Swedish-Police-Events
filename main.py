@@ -5,6 +5,7 @@ from app.datahandler import DataHandler
 
 
 class Menu:
+
     def __init__(self, console) -> None:
         self.console = console
         self.dh = DataHandler(console=console)
@@ -24,9 +25,10 @@ class Menu:
                     "Filter events",
                     "Exit",
                 ]
-                choice = select(
-                    menu_choices, cursor=">", cursor_style="bold blue", cursor_index=0
-                )
+                choice = select(menu_choices,
+                                cursor=">",
+                                cursor_style="bold blue",
+                                cursor_index=0)
                 if "Display all events" in choice:
                     if confirm("Are you sure you want to display all events?"):
                         self.dh.display_events()
@@ -55,9 +57,10 @@ class Menu:
                     "Location",
                     "Back",
                 ]
-                choice = select(
-                    menu_choices, cursor=">", cursor_style="bold blue", cursor_index=0
-                )
+                choice = select(menu_choices,
+                                cursor=">",
+                                cursor_style="bold blue",
+                                cursor_index=0)
                 if choice == "Date":
                     self.dh.filter_by_date()
                 elif choice == "Type":
@@ -68,7 +71,8 @@ class Menu:
                 elif choice == "Location":
                     self.dh.filter_by_location()
                 elif choice == "Back":
-                    self.console.print("Going back to main menu", style="bold red")
+                    self.console.print("Going back to main menu",
+                                       style="bold red")
                     self.console.print(100 * "-")
                     self.sub_menu_running = False
         except TypeError:

@@ -4,6 +4,7 @@ from beaupy import prompt
 
 
 class DataHandler:
+
     def __init__(self, console) -> None:
         self.console = console
 
@@ -17,8 +18,7 @@ class DataHandler:
             self.console.print(f"   - event type: {event_type}", style="yellow")
             self.console.print(f"   - filter: {filter}", style="yellow")
             data = requests.get(
-                f"https://polisen.se/api/events?{event_type}={filter}"
-            ).json()
+                f"https://polisen.se/api/events?{event_type}={filter}").json()
             return [self.make_data_pretty(event) for event in data]
         data = requests.get("https://polisen.se/api/events").json()
         return [self.make_data_pretty(event) for event in data]
@@ -29,11 +29,8 @@ class DataHandler:
             "Time and date": data["datetime"],
             "Location": data["location"]["name"],
             "GPS coordinates": data["location"]["gps"],
-            "Summary": (
-                "No summary available"
-                if "Efter klockan" in data["summary"]
-                else data["summary"]
-            ),
+            "Summary": ("No summary available" if "Efter klockan"
+                        in data["summary"] else data["summary"]),
             "Type": data["type"],
             "URL": "https://polisen.se" + data["url"],
         }
@@ -75,11 +72,8 @@ class DataHandler:
 
     def filter_by_date(self):
         date = prompt("Enter date: ")
-        if (
-            re.match(r"^\d{4}$", date)
-            or re.match(r"^\d{4}-\d{2}$", date)
-            or re.match(r"^\d{4}-\d{2}-\d{2}$", date)
-        ):
+        if (re.match(r"^\d{4}$", date) or re.match(r"^\d{4}-\d{2}$", date)
+                or re.match(r"^\d{4}-\d{2}-\d{2}$", date)):
             data = self.make_api_call(event_type="datetime", filter=date)
             self.display_data(data)
         else:
